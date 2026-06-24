@@ -303,7 +303,7 @@ export default function IncidentForm() {
           </div>
 
           {/* DYNAMIC COMPANION SECTION */}
-          {formData.incidentType === 'Refusal of Entry' && isMinor && (
+          {isMinor && (
             <>
               <hr className='border-gray-200' />
               <div className='w-full'>
