@@ -29,6 +29,31 @@ export const MobileRecordCard: React.FC<MobileRecordCardProps> = ({
         {record.age || '-'} / {record.gender || '-'}
       </div>
     </div>
+
+    {/* JÁRMŰ INFORMÁCIÓK MODERNEBB STÍLUSBAN */}
+    {record.incidentType === 'Stolen Vehicles' && (
+      <div className='bg-slate-50 p-2.5 rounded border border-gray-200 text-xs text-gray-700 space-y-0.5 shadow-sm'>
+        <p className='font-bold text-indigo-600 uppercase tracking-wider text-[9px] mb-1'>
+          Vehicle Details:
+        </p>
+        <div>
+          <span className='font-semibold text-gray-600'>Brand/Model:</span>{' '}
+          {record.carType || '-'}
+        </div>
+        <div>
+          <span className='font-semibold text-gray-600'>Color / Age:</span>{' '}
+          {record.carColor || '-'} /{' '}
+          {record.carOld ? `${record.carOld} y/o` : '-'}
+        </div>
+        <div>
+          <span className='font-semibold text-gray-600'>Registered in:</span>{' '}
+          <span className='uppercase font-medium'>
+            {record.carRegisteredCountry || '-'}
+          </span>
+        </div>
+      </div>
+    )}
+
     <div className='mt-3 p-2.5 bg-slate-50 border border-gray-200 rounded text-xs font-mono text-gray-800 select-all cursor-pointer'>
       <p className='font-sans font-bold text-gray-400 mb-1 uppercase tracking-wider text-[9px]'>
         Generated Report (Tap to select):

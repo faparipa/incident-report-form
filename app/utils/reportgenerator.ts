@@ -56,6 +56,15 @@ const REPORT_GENERATORS: Record<
       r.whereFounded || 'unknown'
     }.`;
   },
+  'Stolen Vehicles': (r, dt, tm, nat, ag) => {
+    return `On the ${dt}, at ${tm}, a stolen vehicle was intercepted on the ${
+      r.entryExit || 'Entry'
+    } line. Vehicle details: ${r.carType || 'unknown'} (${
+      r.carColor || 'unknown'
+    }), manufacturing age: ${r.carOld || '-'} years, registered country: ${
+      r.carRegisteredCountry ? r.carRegisteredCountry.toUpperCase() : 'unknown'
+    }. Driven by a ${nat} citizen.`;
+  },
 };
 
 export const generateReport = (record: IncidentRecord): string => {
@@ -64,26 +73,39 @@ export const generateReport = (record: IncidentRecord): string => {
   const nat = record.nationality ? record.nationality.toUpperCase() : 'UNK';
   const isMinor = record.age !== '' && parseInt(record.age, 10) < 18;
   const ageGroup = isMinor ? 'Minor age' : 'Adult';
-
+  const country = record.seizingCountry
+    ? record.seizingCountry.toUpperCase()
+    : 'ROU';
+  // 1. Alapjelentés elkészítése (a meglévő logikáid alapján)
+  let baseReport = '';
   const generator = REPORT_GENERATORS[record.incidentType];
-  if (generator) {
-    return generator(record, formattedDate, timeStr, nat, ageGroup);
-  }
 
-  if (record.incidentType.startsWith('Hit in Database')) {
+  if (generator) {
+    baseReport = generator(record, formattedDate, timeStr, nat, ageGroup);
+  } else if (record.incidentType.startsWith('Hit in Database')) {
     const dir = record.entryExit || 'Entry';
-    return `On the ${formattedDate}, at ${timeStr}, on the ${dir} line, a ${nat} (${ageGroup}, ${
+    baseReport = `On the ${formattedDate}, at ${timeStr}, on the ${dir} line, a ${nat} (${ageGroup}, ${
       record.gender || 'unknown'
     }, ${record.age || '??'} y/o.) was hit in ${
       record.reason || 'Database'
     } concerning to a ${nat} ${
       record.docuType || 'ID'
-    }. The document was seized by the ROU border authorities.`;
+    }. The document was seized by the ${country} authorities.`;
+  } else {
+    baseReport = `On the ${formattedDate}, at ${timeStr}, an incident type: ${
+      record.incidentType || 'Other'
+    } was registered for a ${nat} (${ageGroup}, ${
+      record.gender || 'unknown'
+    }, ${record.age || '??'} y/o). Details/Reason: ${record.reason || '-'}.`;
   }
 
-  return `On the ${formattedDate}, at ${timeStr}, an incident type: ${
-    record.incidentType || 'Other'
-  } was registered for a ${nat} (${ageGroup}, ${record.gender || 'unknown'}, ${
-    record.age || '??'
-  } y/o). Details/Reason: ${record.reason || '-'}.`;
+  // 2. HA van beírva egyéb adat, azt fűzzük hozzá a végére egy új mondatban
+  if (record.otherDetails && record.otherDetails.trim() !== '') {
+    // Biztosítjuk, hogy a baseReport ponttal végződjön, mielőtt hozzátesszük az új infót
+    if (!baseReport.endsWith('.')) baseReport += '.';
+    baseReport += ` Remarks: ${record.otherDetails.trim()}`;
+    if (!baseReport.endsWith('.')) baseReport += '.';
+  }
+
+  return baseReport;
 };

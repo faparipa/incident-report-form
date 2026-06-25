@@ -43,6 +43,8 @@ export const DesktopRecordsTable: React.FC<DesktopRecordsTableProps> = ({
               {record.age ? `${record.age} y/o` : '-'} (
               {record.gender ? record.gender.charAt(0) : '-'})
             </td>
+
+            {/* JAVÍTVA: Minden plusz részlet egyetlen szigorú <td> cellán belülre került */}
             <td className='px-4 py-3 text-xs text-gray-600'>
               {record.incidentType === 'Overstay' &&
                 `Days: ${record.overstayDays}, Ban: ${record.banTime}`}
@@ -52,6 +54,10 @@ export const DesktopRecordsTable: React.FC<DesktopRecordsTableProps> = ({
                 `Hit: ${record.reason} (${record.docuType || 'ID'})`}
               {record.incidentType === 'Smuggling of goods' &&
                 `Goods: ${record.whatGoods}, Amt: ${record.amountGoods}`}
+              {record.incidentType === 'Stolen Vehicles' &&
+                `Vehicle: ${record.carType || '-'} (${
+                  record.carColor || '-'
+                }), Reg: ${record.carRegisteredCountry?.toUpperCase() || '-'}`}
             </td>
           </tr>
         ))}

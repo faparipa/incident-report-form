@@ -39,5 +39,7 @@ export interface IncidentRecord {
   whereFounded: string;
   parensOld: string;
   parentGender: string;
+  otherDetails: string;
+  seizingCountry: string;
   report?: string;
 }

@@ -33,18 +33,38 @@ export default function IncidentForm() {
     whereFounded: '',
     parensOld: '',
     parentGender: '',
+    seizingCountry: 'ROU',
+    otherDetails: '',
   });
 
   const [submittedRecords, setSubmittedRecords] = useState<IncidentRecord[]>(
     []
   );
 
+  // 1. BETÖLTÉS: Amikor az oldal elindul, beolvassuk a mentett adatokat
   useEffect(() => {
     setFormData((prev) => ({ ...prev, date: getTodayDateString() }));
+
+    const savedRecords = localStorage.getItem('incidentRecords');
+    if (savedRecords) {
+      try {
+        setSubmittedRecords(JSON.parse(savedRecords));
+      } catch (e) {
+        console.error('Hiba a mentett adatok betöltésekor', e);
+      }
+    }
   }, []);
 
+  // 2. MENTÉS: Minden alkalommal, amikor a submittedRecords változik, elmentjük
+  const saveToLocalStorage = (records: IncidentRecord[]) => {
+    localStorage.setItem('incidentRecords', JSON.stringify(records));
+  };
+
+  // JAVÍTVA: HTMLTextAreaElement hozzáadva a típusokhoz a szövegdoboz miatt
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -53,10 +73,13 @@ export default function IncidentForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const generatedText = generateReport(formData);
-    setSubmittedRecords((prev) => [
-      ...prev,
+    const updatedRecords = [
+      ...submittedRecords,
       { ...formData, report: generatedText },
-    ]);
+    ];
+
+    setSubmittedRecords(updatedRecords);
+    saveToLocalStorage(updatedRecords); // Mentés gombnyomáskor
 
     setFormData({
       incidentType: '',
@@ -80,7 +103,21 @@ export default function IncidentForm() {
       whereFounded: '',
       parensOld: '',
       parentGender: '',
+      otherDetails: '',
+      seizingCountry: 'ROU',
     });
+  };
+
+  // 3. TÖRLÉS: Kiüríti a listát és törli a böngésző memóriájából is
+  const handleClearAll = () => {
+    if (
+      window.confirm(
+        'Are you sure you want to delete ALL registered incidents? This cannot be undone.'
+      )
+    ) {
+      setSubmittedRecords([]);
+      localStorage.removeItem('incidentRecords');
+    }
   };
 
   const isMinor = formData.age !== '' && parseInt(formData.age, 10) < 18;
@@ -287,17 +324,32 @@ export default function IncidentForm() {
                 )}
 
               {formData.incidentType.startsWith('Hit in Database') && (
-                <div className='flex flex-col w-full'>
-                  <FormLabel label='Docu Type' />
-                  <input
-                    type='text'
-                    name='docuType'
-                    placeholder='e.g., ID, Passport'
-                    value={formData.docuType}
-                    onChange={handleChange}
-                    className={inputClasses}
-                  />
-                </div>
+                <>
+                  <div className='flex flex-col w-full'>
+                    <FormLabel label='Docu Type' />
+                    <input
+                      type='text'
+                      name='docuType'
+                      placeholder='e.g., ID, Passport'
+                      value={formData.docuType}
+                      onChange={handleChange}
+                      className={inputClasses}
+                    />
+                  </div>
+                  {/* ÚJ INPUT MEZŐ AZ ORSZÁGKÓDNAK */}
+                  <div className='flex flex-col w-full'>
+                    <FormLabel label='Seizing Country Code' />
+                    <input
+                      type='text'
+                      name='seizingCountry'
+                      placeholder='e.g., ROU, HUN, SVK'
+                      maxLength={3}
+                      value={formData.seizingCountry}
+                      onChange={handleChange}
+                      className={`${inputClasses} uppercase font-semibold`}
+                    />
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -387,6 +439,85 @@ export default function IncidentForm() {
             </>
           )}
 
+          {/* DYNAMIC STOLEN VEHICLES SECTION */}
+          {formData.incidentType === 'Stolen Vehicles' && (
+            <>
+              <hr className='border-gray-200' />
+              <div className='w-full'>
+                <h3 className='text-base sm:text-lg font-bold text-gray-800 mb-4'>
+                  Stolen Vehicle Details
+                </h3>
+                <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full'>
+                  <div className='flex flex-col w-full'>
+                    <FormLabel label='Vehicle Brand / Model' />
+                    <input
+                      type='text'
+                      name='carType'
+                      placeholder='e.g., BMW X5'
+                      value={formData.carType}
+                      onChange={handleChange}
+                      className={inputClasses}
+                    />
+                  </div>
+                  <div className='flex flex-col w-full'>
+                    <FormLabel label='Vehicle Color' />
+                    <input
+                      type='text'
+                      name='carColor'
+                      placeholder='e.g., Black'
+                      value={formData.carColor}
+                      onChange={handleChange}
+                      className={inputClasses}
+                    />
+                  </div>
+                  <div className='flex flex-col w-full'>
+                    <FormLabel label='Vehicle Age (Years)' />
+                    <input
+                      type='number'
+                      name='carOld'
+                      min='0'
+                      placeholder='e.g., 5'
+                      value={formData.carOld}
+                      onChange={handleChange}
+                      className={inputClasses}
+                    />
+                  </div>
+                  <div className='flex flex-col w-full'>
+                    <FormLabel label='Registered Country' />
+                    <input
+                      type='text'
+                      name='carRegisteredCountry'
+                      placeholder='e.g., DEU, ITA'
+                      value={formData.carRegisteredCountry}
+                      onChange={handleChange}
+                      className={`${inputClasses} uppercase`}
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          <hr className='border-gray-200' />
+
+          {/* ALWAYS VISIBLE REMARKS SECTION */}
+          <div className='w-full'>
+            <h3 className='text-base sm:text-lg font-bold text-gray-800 mb-4'>
+              Additional Information
+            </h3>
+            <div className='flex flex-col w-full'>
+              <FormLabel label='Other Details / Remarks / Actions Taken' />
+              <textarea
+                name='otherDetails'
+                rows={3}
+                placeholder='Enter any other relevant information, passport numbers, alert codes, or actions taken...'
+                value={formData.otherDetails}
+                onChange={handleChange}
+                className='mt-1 block w-full rounded-md border border-gray-300 bg-white p-2.5 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base box-border resize-y'
+              />
+            </div>
+          </div>
+
           <div className='pt-4 w-full'>
             <button
               type='submit'
@@ -398,13 +529,23 @@ export default function IncidentForm() {
         </form>
       </div>
 
-      {/* LOGS OUTPUT */}
+      {/* LOGS OUTPUT ÉS TÖRLÉS GOMB */}
       {submittedRecords.length > 0 && (
         <div className='space-y-4 w-full'>
-          <h2 className='text-lg sm:text-xl font-bold text-gray-900 px-1'>
-            Registered Incidents Logs
-          </h2>
+          <div className='flex justify-between items-center px-1'>
+            <h2 className='text-lg sm:text-xl font-bold text-gray-900'>
+              Registered Incidents Logs
+            </h2>
+            <button
+              onClick={handleClearAll}
+              className='px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded shadow transition-colors cursor-pointer'
+            >
+              Clear All Logs
+            </button>
+          </div>
+
           <DesktopRecordsTable records={submittedRecords} />
+
           <div className='block lg:hidden space-y-4 w-full box-border'>
             {submittedRecords.map((record, index) => (
               <MobileRecordCard key={index} record={record} />
