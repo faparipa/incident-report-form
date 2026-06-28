@@ -3,10 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { FormLabel } from './FormLabel';
 import { getTodayDateString } from '../utils/date';
-
-interface BorderTrafficCountersProps {
-  onRefresh: () => void;
-}
+import { BorderTrafficCountersProps } from '../types/incident';
 
 export function BorderTrafficCounters({
   onRefresh,

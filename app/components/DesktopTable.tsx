@@ -1,12 +1,11 @@
-import { IncidentRecord } from '../types/incident';
+import { IncidentRecordsListProps } from '../types/incident';
 
 import { exportAllRecordsToExcel } from '../utils/exportExcel';
 
-interface Props {
-  records: IncidentRecord[];
-}
-
-export function DesktopRecordsTable({ records }: Props) {
+export function DesktopRecordsTable({
+  records,
+  onEdit,
+}: IncidentRecordsListProps) {
   return (
     <div className='space-y-4 w-full'>
       {/* EXCEL LETÖLTÉS GOMB */}
@@ -45,17 +44,17 @@ export function DesktopRecordsTable({ records }: Props) {
                 <td className='px-4 py-3 whitespace-nowrap text-gray-500'>
                   {record.date} <span className='text-xs'>{record.time}</span>
                 </td>
-                <td className='px-4 py-3 whitespace-nowrap'>
+                <td className='px-4 py-3 whitespace-nowrap text-gray-700'>
                   {record.entryExit}
                 </td>
-                <td className='px-4 py-3 font-medium whitespace-nowrap uppercase'>
+                <td className='px-4 py-3 font-medium whitespace-nowrap text-gray-700 uppercase'>
                   {record.nationality}
                 </td>
-                <td className='px-4 py-3 whitespace-nowrap capitalize'>
+                <td className='px-4 py-3 whitespace-nowrap text-gray-700 capitalize'>
                   {record.age ? `${record.age} y/o` : '-'} (
                   {record.gender ? record.gender.charAt(0) : '-'})
                 </td>
-                <td className='px-4 py-3 text-xs text-gray-600'>
+                <td className='px-4 py-3 text-xs text-gray-700'>
                   {record.incidentType === 'Overstay' &&
                     `Days: ${record.overstayDays}, Ban: ${record.banTime}`}
                   {record.incidentType === 'Refusal of Entry' &&
@@ -68,6 +67,14 @@ export function DesktopRecordsTable({ records }: Props) {
                     `Vehicle: ${record.carType || '-'}, Reg: ${
                       record.carRegisteredCountry?.toUpperCase() || '-'
                     }`}
+                </td>
+                <td>
+                  <button
+                    onClick={() => onEdit(index)}
+                    className='px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded shadow transition-colors cursor-pointer'
+                  >
+                    Edit
+                  </button>
                 </td>
               </tr>
             ))}

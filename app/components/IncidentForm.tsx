@@ -1,154 +1,30 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-
-import { IncidentRecord, TrafficLogItem } from '../types/incident';
-import { getTodayDateString } from '../utils/date';
-
+import { COUNTRY_CODES } from '../utils/countryCodes';
 import { FormLabel } from '../components/FormLabel';
 import { DesktopRecordsTable } from '../components/DesktopTable';
 import { MobileRecordCard } from '../components/MobileCard';
-import { generateReport } from '../utils/reportgenerator';
-import { COUNTRY_CODES } from '../utils/countryCodes'; // Új moduláris import az országkódokhoz
 import { BorderTrafficCounters } from './BorderTrafficCounters';
 import { BorderTrafficTable } from './BorderTrafficTable';
+import { useIncidentForm } from '../utils/useIncidentForm';
+import { INCIDENT_TYPES } from '../utils/constants';
 
 export default function IncidentForm() {
-  const [formData, setFormData] = useState<IncidentRecord>({
-    incidentType: '',
-    date: '',
-    time: '',
-    entryExit: '',
-    nationality: '',
-    gender: '',
-    age: '',
-    reason: '',
-    overstayDays: '',
-    penalty: '',
-    banTime: '',
-    carColor: '',
-    carType: '',
-    carOld: '',
-    carRegisteredCountry: '',
-    docuType: '',
-    whatGoods: '',
-    amountGoods: '',
-    whereFounded: '',
-    parensOld: '',
-    parentGender: '',
-    seizingCountry: 'ROU',
-    otherDetails: '',
-  });
+  const {
+    formData,
+    submittedRecords,
+    trafficLogs,
+    isMinor,
+    editingIndex,
+    handleStartEdit,
+    handleCancelEdit,
+    handleChange,
+    handleSubmit,
+    handleClearTrafficLogs,
+    handleClearAll,
+    loadTrafficLogs,
+  } = useIncidentForm();
 
-  const [submittedRecords, setSubmittedRecords] = useState<IncidentRecord[]>(
-    []
-  );
-  const [trafficLogs, setTrafficLogs] = useState<TrafficLogItem[]>([]);
-
-  const loadTrafficLogs = () => {
-    const saved = localStorage.getItem('dailyTrafficLogs');
-    if (saved) {
-      try {
-        setTrafficLogs(JSON.parse(saved));
-      } catch (e) {}
-    } else {
-      setTrafficLogs([]);
-    }
-  };
-
-  // 1. BETÖLTÉS: Amikor az oldal elindul, beolvassuk a mentett adatokat
-  useEffect(() => {
-    setFormData((prev) => ({ ...prev, date: getTodayDateString() }));
-
-    const savedRecords = localStorage.getItem('incidentRecords');
-    if (savedRecords) {
-      try {
-        setSubmittedRecords(JSON.parse(savedRecords));
-      } catch (e) {
-        console.error('Hiba a mentett adatok betöltésekor', e);
-      }
-    }
-    loadTrafficLogs();
-  }, []);
-
-  const handleClearTrafficLogs = () => {
-    if (window.confirm('Delete all saved traffic logs?')) {
-      localStorage.removeItem('dailyTrafficLogs');
-      loadTrafficLogs();
-    } else {
-      return;
-    }
-  };
-
-  // 2. MENTÉS: Minden alkalommal, amikor a submittedRecords változik, elmentjük
-  const saveToLocalStorage = (records: IncidentRecord[]) => {
-    localStorage.setItem('incidentRecords', JSON.stringify(records));
-  };
-
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const generatedText = generateReport(formData);
-    const updatedRecords = [
-      ...submittedRecords,
-      { ...formData, report: generatedText },
-    ];
-
-    setSubmittedRecords(updatedRecords);
-    saveToLocalStorage(updatedRecords); // Mentés gombnyomáskor
-
-    setFormData({
-      incidentType: '',
-      date: getTodayDateString(),
-      time: '',
-      entryExit: '',
-      nationality: '',
-      gender: '',
-      age: '',
-      reason: '',
-      overstayDays: '',
-      penalty: '',
-      banTime: '',
-      carColor: '',
-      carType: '',
-      carOld: '',
-      carRegisteredCountry: '',
-      docuType: '',
-      whatGoods: '',
-      amountGoods: '',
-      whereFounded: '',
-      parensOld: '',
-      parentGender: '',
-      otherDetails: '',
-      seizingCountry: 'ROU',
-    });
-  };
-
-  // 3. TÖRLÉS: Kiüríti a listát és törli a böngésző memóriájából is
-  const handleClearAll = () => {
-    if (
-      window.confirm(
-        'Are you sure you want to delete ALL registered incidents and daily traffic logs? This cannot be undone.'
-      )
-    ) {
-      setSubmittedRecords([]);
-      localStorage.removeItem('incidentRecords');
-      localStorage.removeItem('dailyTrafficLogs');
-      loadTrafficLogs();
-    } else {
-      return;
-    }
-  };
-
-  const isMinor = formData.age !== '' && parseInt(formData.age, 10) < 18;
   const inputClasses =
     'mt-1 block w-full rounded-md border border-gray-300 bg-white p-2.5 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base box-border';
 
@@ -176,35 +52,11 @@ export default function IncidentForm() {
                   className={inputClasses}
                 >
                   <option value=''>Select type...</option>
-                  <option value='Hit in Database'>Hit in Database</option>
-                  <option value='Refusal of Entry'>Refusal of Entry</option>
-                  <option value='Overstay'>Overstay</option>
-                  <option value='Administrative'>Administrative</option>
-                  <option value='Asylum Request'>Asylum Request</option>
-                  <option value='Avoiding Border Control'>
-                    Avoiding Border Control
-                  </option>
-                  <option value='Document Fraud'>Document Fraud</option>
-                  <option value='FTF Suspicious Travel'>
-                    FTF Suspicious Travel
-                  </option>
-                  <option value='Hiding in Transportation Means/Clandestine'>
-                    Hiding in Transportation Means/Clandestine
-                  </option>
-                  <option value='Hit in Database – related to Terrorist / Extremist activities'>
-                    Hit in Database – related to Terrorist / Extremist
-                    activities
-                  </option>
-                  <option value='Illegal Border- Crossing'>
-                    Illegal Border- Crossing
-                  </option>
-                  <option value='Readmission'>Readmission</option>
-                  <option value='Smuggling of goods'>Smuggling of goods</option>
-                  <option value='Stolen Vehicles'>Stolen Vehicles</option>
-                  <option value='Trafficking in Human Beings'>
-                    Trafficking in Human Beings
-                  </option>
-                  <option value='Other'>Other</option>
+                  {INCIDENT_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -263,7 +115,7 @@ export default function IncidentForm() {
                 <input
                   type='text'
                   name='nationality'
-                  placeholder='e.g., ROU, MDL, SRB'
+                  placeholder='e.g., ROU'
                   required
                   maxLength={3}
                   value={formData.nationality}
@@ -352,7 +204,7 @@ export default function IncidentForm() {
                     <input
                       type='text'
                       name='reason'
-                      placeholder='e.g., SIS Art. 38, Reason F'
+                      placeholder='e.g., SIS Art. 38'
                       value={formData.reason}
                       onChange={handleChange}
                       className={inputClasses}
@@ -367,7 +219,7 @@ export default function IncidentForm() {
                     <input
                       type='text'
                       name='docuType'
-                      placeholder='e.g., ID, Passport'
+                      placeholder='e.g., ID'
                       value={formData.docuType}
                       onChange={handleChange}
                       className={inputClasses}
@@ -378,7 +230,6 @@ export default function IncidentForm() {
                     <input
                       type='text'
                       name='seizingCountry'
-                      placeholder='e.g., ROU, HUN, SVK'
                       maxLength={3}
                       value={formData.seizingCountry}
                       onChange={handleChange}
@@ -390,7 +241,7 @@ export default function IncidentForm() {
             </div>
           </div>
 
-          {/* DYNAMIC COMPANION SECTION */}
+          {/* DYNAMIC SECTIONS */}
           {isMinor && (
             <>
               <hr className='border-gray-200' />
@@ -428,7 +279,6 @@ export default function IncidentForm() {
             </>
           )}
 
-          {/* DYNAMIC SMUGGLING SECTION */}
           {formData.incidentType === 'Smuggling of goods' && (
             <>
               <hr className='border-gray-200' />
@@ -442,7 +292,7 @@ export default function IncidentForm() {
                     <input
                       type='text'
                       name='whatGoods'
-                      placeholder='e.g., Cigarettes'
+                      placeholder='Cigarettes'
                       value={formData.whatGoods}
                       onChange={handleChange}
                       className={inputClasses}
@@ -453,7 +303,7 @@ export default function IncidentForm() {
                     <input
                       type='text'
                       name='amountGoods'
-                      placeholder='e.g., 200 packs'
+                      placeholder='200 packs'
                       value={formData.amountGoods}
                       onChange={handleChange}
                       className={inputClasses}
@@ -464,7 +314,7 @@ export default function IncidentForm() {
                     <input
                       type='text'
                       name='whereFounded'
-                      placeholder='e.g., luggage under the cloths'
+                      placeholder='luggage'
                       value={formData.whereFounded}
                       onChange={handleChange}
                       className={inputClasses}
@@ -475,7 +325,6 @@ export default function IncidentForm() {
             </>
           )}
 
-          {/* DYNAMIC STOLEN VEHICLES SECTION */}
           {formData.incidentType === 'Stolen Vehicles' && (
             <>
               <hr className='border-gray-200' />
@@ -489,7 +338,7 @@ export default function IncidentForm() {
                     <input
                       type='text'
                       name='carType'
-                      placeholder='e.g., BMW X5'
+                      placeholder='BMW X5'
                       value={formData.carType}
                       onChange={handleChange}
                       className={inputClasses}
@@ -500,7 +349,7 @@ export default function IncidentForm() {
                     <input
                       type='text'
                       name='carColor'
-                      placeholder='e.g., Black'
+                      placeholder='Black'
                       value={formData.carColor}
                       onChange={handleChange}
                       className={inputClasses}
@@ -512,7 +361,7 @@ export default function IncidentForm() {
                       type='number'
                       name='carOld'
                       min='0'
-                      placeholder='e.g., 5'
+                      placeholder='5'
                       value={formData.carOld}
                       onChange={handleChange}
                       className={inputClasses}
@@ -523,7 +372,7 @@ export default function IncidentForm() {
                     <input
                       type='text'
                       name='carRegisteredCountry'
-                      placeholder='e.g., DEU, ITA'
+                      placeholder='DEU'
                       value={formData.carRegisteredCountry}
                       onChange={handleChange}
                       className={`${inputClasses} uppercase`}
@@ -536,7 +385,6 @@ export default function IncidentForm() {
 
           <hr className='border-gray-200' />
 
-          {/* ALWAYS VISIBLE REMARKS SECTION */}
           <div className='w-full'>
             <h3 className='text-base sm:text-lg font-bold text-gray-800 mb-4'>
               Additional Information
@@ -546,7 +394,7 @@ export default function IncidentForm() {
               <textarea
                 name='otherDetails'
                 rows={3}
-                placeholder='Enter any other relevant information, passport numbers, alert codes, or actions taken...'
+                placeholder='Enter any other relevant information...'
                 value={formData.otherDetails}
                 onChange={handleChange}
                 className='mt-1 block w-full rounded-md border border-gray-300 bg-white p-2.5 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base box-border resize-y'
@@ -554,45 +402,70 @@ export default function IncidentForm() {
             </div>
           </div>
 
-          <div className='pt-4 w-full'>
+          <div className='pt-4 w-full flex flex-col sm:flex-row gap-3'>
             <button
               type='submit'
-              className='w-full inline-flex justify-center py-3 px-4 border border-transparent shadow-sm text-base font-semibold rounded-md text-white bg-indigo-600 hover:bg-indigo-700 transition-colors cursor-pointer'
+              className={`w-full inline-flex justify-center py-3 px-4 border border-transparent shadow-sm text-base font-semibold rounded-md text-white transition-colors cursor-pointer ${
+                editingIndex > -1
+                  ? 'bg-amber-600 hover:bg-amber-700'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+              }`}
             >
-              Add Incident Record
+              {editingIndex > -1
+                ? 'Update & Regenerate Report'
+                : 'Add Incident Record'}
             </button>
+
+            {editingIndex > -1 && (
+              <button
+                type='button'
+                onClick={handleCancelEdit}
+                className='w-full sm:w-auto inline-flex justify-center py-3 px-6 border border-gray-300 shadow-sm text-base font-semibold rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors cursor-pointer'
+              >
+                Cancel
+              </button>
+            )}
           </div>
         </form>
       </div>
+
       <BorderTrafficCounters onRefresh={loadTrafficLogs} />
-      {/* LOGS OUTPUT ÉS TÖRLÉS GOMB */}
+
       {submittedRecords.length > 0 && (
         <div className='space-y-4 w-full'>
           <div className='flex justify-between items-center px-1'>
-            <h2 className='text-lg sm:text-xl font-bold text-gray-900'>
+            <h2 className='text-lg sm:text-xl font-bold text-gray-300'>
               Registered Incidents Logs
             </h2>
             <button
               onClick={handleClearAll}
-              className='px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded shadow transition-colors cursor-pointer'
+              className='px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xm font-semibold rounded shadow transition-colors cursor-pointer'
             >
               Clear All Logs
             </button>
           </div>
 
-          <DesktopRecordsTable records={submittedRecords} />
-          <BorderTrafficTable
-            trafficLogs={trafficLogs}
-            onClear={handleClearTrafficLogs}
+          <DesktopRecordsTable
+            records={submittedRecords}
+            onEdit={handleStartEdit}
           />
 
           <div className='block lg:hidden space-y-4 w-full box-border'>
             {submittedRecords.map((record, index) => (
-              <MobileRecordCard key={index} record={record} />
+              <MobileRecordCard
+                key={index}
+                record={record}
+                index={index}
+                onEdit={handleStartEdit}
+              />
             ))}
           </div>
         </div>
       )}
+      <BorderTrafficTable
+        trafficLogs={trafficLogs}
+        onClear={handleClearTrafficLogs}
+      />
     </div>
   );
 }

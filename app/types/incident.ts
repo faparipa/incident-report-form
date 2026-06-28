@@ -54,3 +54,23 @@ export interface BorderTrafficTableProps {
   trafficLogs: TrafficLogItem[];
   onClear: () => void;
 }
+
+export interface IncidentRecordsListProps {
+  records: IncidentRecord[];
+  onEdit: (index: number) => void;
+}
+
+export interface MobileRecordCardProps {
+  record: IncidentRecord;
+  onEdit: (index: number) => void;
+  index: number;
+}
+
+export interface BorderTrafficCountersProps {
+  onRefresh: () => void;
+}
+
+export interface FormLabelProps {
+  label: string;
+  required?: boolean;
+}
