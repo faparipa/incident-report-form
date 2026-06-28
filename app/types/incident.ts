@@ -43,3 +43,9 @@ export interface IncidentRecord {
   seizingCountry: string;
   report?: string;
 }
+
+export interface TrafficLogItem {
+  date: string;
+  entry: string;
+  exit: string;
+}

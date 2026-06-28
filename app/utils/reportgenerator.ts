@@ -13,7 +13,7 @@ const REPORT_GENERATORS: Record<
       r.overstayDays || '0'
     } days, ${pronoun} was issued a ticket for ${
       r.penalty || '0'
-    } RON, and a BAN for entry for: ${r.banTime || '-'}months.`;
+    } RON, and a BAN for entry for: ${r.banTime || '-'} months.`;
   },
 
   'Refusal of Entry': (r, dt, tm, nat, ag) => {

@@ -2,13 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 
-import { IncidentRecord } from '../types/incident';
+import { IncidentRecord, TrafficLogItem } from '../types/incident';
 import { getTodayDateString } from '../utils/date';
 
 import { FormLabel } from '../components/FormLabel';
 import { DesktopRecordsTable } from '../components/DesktopTable';
 import { MobileRecordCard } from '../components/MobileCard';
 import { generateReport } from '../utils/reportgenerator';
+import { COUNTRY_CODES } from '../utils/countryCodes'; // Új moduláris import az országkódokhoz
+import { BorderTrafficCounters } from './BorderTrafficCounters';
+import { BorderTrafficTable } from './BorderTrafficTable';
 
 export default function IncidentForm() {
   const [formData, setFormData] = useState<IncidentRecord>({
@@ -40,6 +43,18 @@ export default function IncidentForm() {
   const [submittedRecords, setSubmittedRecords] = useState<IncidentRecord[]>(
     []
   );
+  const [trafficLogs, setTrafficLogs] = useState<TrafficLogItem[]>([]);
+
+  const loadTrafficLogs = () => {
+    const saved = localStorage.getItem('dailyTrafficLogs');
+    if (saved) {
+      try {
+        setTrafficLogs(JSON.parse(saved));
+      } catch (e) {}
+    } else {
+      setTrafficLogs([]);
+    }
+  };
 
   // 1. BETÖLTÉS: Amikor az oldal elindul, beolvassuk a mentett adatokat
   useEffect(() => {
@@ -53,14 +68,21 @@ export default function IncidentForm() {
         console.error('Hiba a mentett adatok betöltésekor', e);
       }
     }
+    loadTrafficLogs();
   }, []);
+
+  const handleClearTrafficLogs = () => {
+    if (window.confirm('Delete all saved traffic logs?')) {
+      localStorage.removeItem('dailyTrafficLogs');
+      loadTrafficLogs();
+    }
+  };
 
   // 2. MENTÉS: Minden alkalommal, amikor a submittedRecords változik, elmentjük
   const saveToLocalStorage = (records: IncidentRecord[]) => {
     localStorage.setItem('incidentRecords', JSON.stringify(records));
   };
 
-  // JAVÍTVA: HTMLTextAreaElement hozzáadva a típusokhoz a szövegdoboz miatt
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -237,10 +259,19 @@ export default function IncidentForm() {
                   name='nationality'
                   placeholder='e.g., ROU, MDL, SRB'
                   required
+                  maxLength={3}
                   value={formData.nationality}
                   onChange={handleChange}
-                  className={`${inputClasses} uppercase`}
+                  list='nationality-list'
+                  className={`${inputClasses} uppercase font-semibold`}
                 />
+                <datalist id='nationality-list'>
+                  {COUNTRY_CODES.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.name}
+                    </option>
+                  ))}
+                </datalist>
               </div>
 
               <div className='flex flex-col w-full'>
@@ -336,7 +367,6 @@ export default function IncidentForm() {
                       className={inputClasses}
                     />
                   </div>
-                  {/* ÚJ INPUT MEZŐ AZ ORSZÁGKÓDNAK */}
                   <div className='flex flex-col w-full'>
                     <FormLabel label='Seizing Country Code' />
                     <input
@@ -528,7 +558,7 @@ export default function IncidentForm() {
           </div>
         </form>
       </div>
-
+      <BorderTrafficCounters onRefresh={loadTrafficLogs} />
       {/* LOGS OUTPUT ÉS TÖRLÉS GOMB */}
       {submittedRecords.length > 0 && (
         <div className='space-y-4 w-full'>
@@ -545,6 +575,10 @@ export default function IncidentForm() {
           </div>
 
           <DesktopRecordsTable records={submittedRecords} />
+          <BorderTrafficTable
+            trafficLogs={trafficLogs}
+            onClear={handleClearTrafficLogs}
+          />
 
           <div className='block lg:hidden space-y-4 w-full box-border'>
             {submittedRecords.map((record, index) => (
