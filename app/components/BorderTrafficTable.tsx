@@ -1,17 +1,6 @@
 'use client';
 
-import React from 'react';
-
-interface TrafficLogItem {
-  date: string;
-  entry: string;
-  exit: string;
-}
-
-interface BorderTrafficTableProps {
-  trafficLogs: TrafficLogItem[];
-  onClear: () => void;
-}
+import { BorderTrafficTableProps } from '../types/incident';
 
 export function BorderTrafficTable({
   trafficLogs,
@@ -27,7 +16,7 @@ export function BorderTrafficTable({
         </h3>
         <button
           onClick={onClear}
-          className='text-xs text-red-600 hover:text-red-800 font-medium cursor-pointer'
+          className='px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded shadow transition-colors cursor-pointer'
         >
           Clear Traffic Logs
         </button>

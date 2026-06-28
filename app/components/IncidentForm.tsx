@@ -75,6 +75,8 @@ export default function IncidentForm() {
     if (window.confirm('Delete all saved traffic logs?')) {
       localStorage.removeItem('dailyTrafficLogs');
       loadTrafficLogs();
+    } else {
+      return;
     }
   };
 
@@ -134,11 +136,15 @@ export default function IncidentForm() {
   const handleClearAll = () => {
     if (
       window.confirm(
-        'Are you sure you want to delete ALL registered incidents? This cannot be undone.'
+        'Are you sure you want to delete ALL registered incidents and daily traffic logs? This cannot be undone.'
       )
     ) {
       setSubmittedRecords([]);
       localStorage.removeItem('incidentRecords');
+      localStorage.removeItem('dailyTrafficLogs');
+      loadTrafficLogs();
+    } else {
+      return;
     }
   };
 

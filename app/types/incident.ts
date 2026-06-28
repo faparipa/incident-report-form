@@ -49,3 +49,8 @@ export interface TrafficLogItem {
   entry: string;
   exit: string;
 }
+
+export interface BorderTrafficTableProps {
+  trafficLogs: TrafficLogItem[];
+  onClear: () => void;
+}

@@ -62,7 +62,7 @@ export function BorderTrafficCounters({
 
     // Szólunk a főoldalnak, hogy rajzolja újra a kis táblázatot
     onRefresh();
-    alert('Traffic counters saved successfully!');
+    //alert('Traffic counters saved successfully!');
   };
 
   const inputClasses =
