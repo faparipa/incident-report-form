@@ -5,17 +5,18 @@ import { FormLabel } from './FormLabel';
 import { getTodayDateString } from '../utils/date';
 import { BorderTrafficCountersProps } from '../types/incident';
 import { db } from '../utils/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
+import { collection, addDoc } from 'firebase/firestore';
 
 export function BorderTrafficCounters({
   onRefresh,
 }: BorderTrafficCountersProps) {
+  const { user } = useAuth();
   const [trafficStats, setTrafficStats] = useState({
     dailyEntryTraffic: '',
     dailyExitTraffic: '',
   });
 
-  // Az éppen gépelt adatok betöltése local-ból (mielőtt elküldenénk a felhőbe)
   useEffect(() => {
     const savedCurrent = localStorage.getItem('currentTrafficInput');
     if (savedCurrent) {
@@ -33,7 +34,11 @@ export function BorderTrafficCounters({
   };
 
   const handleSaveTraffic = async () => {
-    // 1. Ellenőrzés: Üres mezők kiszűrése
+    if (!user) {
+      alert('Please log in first!');
+      return;
+    }
+
     if (!trafficStats.dailyEntryTraffic && !trafficStats.dailyExitTraffic) {
       alert('Please fill in entry or exit traffic before saving!');
       return;
@@ -44,31 +49,20 @@ export function BorderTrafficCounters({
     const exitVal = Number(trafficStats.dailyExitTraffic) || 0;
 
     try {
-      // 2. Mentés a Firebase Firestore felhőbe
-      await setDoc(doc(db, 'trafficLogs', today), {
+      // 1. Mentés a Firestore-ba a BEJELENTKEZETT USER ID-JÁVAL
+      await addDoc(collection(db, 'trafficLogs'), {
+        userId: user.uid, // <-- EZ HIÁNYZOTT!
         date: today,
         entry: entryVal,
         exit: exitVal,
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       });
 
-      // 3. Biztonsági mentés a localStorage-ba is (a gyors helyi rendereléshez és Excelhez)
-      const savedLogs = localStorage.getItem('dailyTrafficLogs');
-      const currentLogs = savedLogs ? JSON.parse(savedLogs) : [];
-
-      const filteredLogs = currentLogs.filter((log: any) => log.date !== today);
-      const updatedLogs = [
-        ...filteredLogs,
-        { date: today, entry: entryVal, exit: exitVal },
-      ];
-
-      localStorage.setItem('dailyTrafficLogs', JSON.stringify(updatedLogs));
-
-      // 4. Inputok kiürítése
+      // 2. Form alaphelyzetbe állítása
       setTrafficStats({ dailyEntryTraffic: '', dailyExitTraffic: '' });
       localStorage.removeItem('currentTrafficInput');
 
-      // 5. FRISSÍTÉSI ÉRTESÍTÉS: Szólunk a szülő komponensnek, hogy a táblázat frissüljön alul!
+      // 3. Szülő értesítése
       if (onRefresh) {
         onRefresh();
       }

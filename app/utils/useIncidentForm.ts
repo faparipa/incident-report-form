@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { IncidentRecord, TrafficLogItem } from '../types/incident';
-import { getTodayDateString } from '../utils/date';
-import { generateReport } from '../utils/reportgenerator';
+import { getTodayDateString } from './date';
+import { generateReport } from './reportgenerator';
 import { INITIAL_FORM_DATA } from './constants';
-import { db } from '../utils/firebase';
+import { db } from './firebase';
+import { useAuth } from '../context/AuthContext';
 import {
   collection,
   onSnapshot,
@@ -13,10 +14,11 @@ import {
   deleteDoc,
   getDocs,
   query,
-  orderBy,
+  where,
 } from 'firebase/firestore';
 
 export function useIncidentForm() {
+  const { user } = useAuth();
   const [formData, setFormData] = useState<IncidentRecord>(INITIAL_FORM_DATA);
   const [submittedRecords, setSubmittedRecords] = useState<IncidentRecord[]>(
     []
@@ -24,32 +26,73 @@ export function useIncidentForm() {
   const [trafficLogs, setTrafficLogs] = useState<TrafficLogItem[]>([]);
   const [editingIndex, setEditingIndex] = useState<number>(-1);
 
-  // 1. VALÓS IDEJŰ ADATBÁZIS FIGYELÉS (Incidensek)
+  // 1. VALÓS IDEJŰ ADATBÁZIS FIGYELÉS (Incidensek user-id alapján)
   useEffect(() => {
-    const q = query(collection(db, 'incidents'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const records = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as (IncidentRecord & { id: string })[];
+    if (!user) {
+      setSubmittedRecords([]);
+      return;
+    }
 
-      setSubmittedRecords(records);
-    });
+    const q = query(
+      collection(db, 'incidents'),
+      where('userId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const records = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as (IncidentRecord & { id: string; createdAt?: string })[];
+
+        // Kliensoldali rendezés createdAt szerint csökkenő sorrendbe (legújabb elöl)
+        records.sort((a, b) => {
+          const dateA = a.createdAt || '';
+          const dateB = b.createdAt || '';
+          return dateB.localeCompare(dateA);
+        });
+
+        setSubmittedRecords(records);
+      },
+      (error) => {
+        console.error('Firestore incidents stream error:', error);
+      }
+    );
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
-  // 2. VALÓS IDEJŰ ADATBÁZIS FIGYELÉS (Forgalmi adatok)
+  // 2. VALÓS IDEJŰ ADATBÁZIS FIGYELÉS (Forgalmi adatok user-id alapján)
   useEffect(() => {
-    const q = query(collection(db, 'trafficLogs'), orderBy('date', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const logs = snapshot.docs.map((doc) => doc.data() as TrafficLogItem);
-      setTrafficLogs(logs);
-      localStorage.setItem('dailyTrafficLogs', JSON.stringify(logs));
-    });
+    if (!user) {
+      setTrafficLogs([]);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'trafficLogs'),
+      where('userId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const logs = snapshot.docs.map((doc) => doc.data() as TrafficLogItem);
+
+        // Kliensoldali rendezés dátum szerint csökkenő sorrendbe
+        logs.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+        setTrafficLogs(logs);
+        localStorage.setItem('dailyTrafficLogs', JSON.stringify(logs));
+      },
+      (error) => {
+        console.error('Firestore trafficLogs stream error:', error);
+      }
+    );
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -74,17 +117,19 @@ export function useIncidentForm() {
   // 3. MENTÉS ÉS MÓDOSÍTÁS FELHŐBE
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
 
     const generatedText = generateReport(formData);
     const recordWithReport = {
       ...formData,
+      userId: user.uid,
       report: generatedText,
       updatedAt: new Date().toISOString(),
     };
 
     try {
       if (editingIndex > -1) {
-        // MÓDOSÍTÁS MÓD
+        // Szerkesztés
         const targetRecord = submittedRecords[editingIndex] as any;
         if (targetRecord.id) {
           const docRef = doc(db, 'incidents', targetRecord.id);
@@ -92,7 +137,7 @@ export function useIncidentForm() {
         }
         setEditingIndex(-1);
       } else {
-        // ÚJ REKORD MÓD
+        // Új rekord
         await addDoc(collection(db, 'incidents'), {
           ...recordWithReport,
           createdAt: new Date().toISOString(),
@@ -105,15 +150,19 @@ export function useIncidentForm() {
     setFormData({ ...INITIAL_FORM_DATA, date: getTodayDateString() });
   };
 
-  // 4. FORGALMI NAPLÓK TÖRLESE
+  // 4. SAJÁT FORGALMI NAPLÓK TÖRLÉSE
   const handleClearTrafficLogs = async () => {
+    if (!user) return;
     if (window.confirm('Delete all saved traffic logs?')) {
       try {
         localStorage.removeItem('dailyTrafficLogs');
         setTrafficLogs([]);
 
-        // Törlés a Firestore-ból is
-        const querySnapshot = await getDocs(collection(db, 'trafficLogs'));
+        const q = query(
+          collection(db, 'trafficLogs'),
+          where('userId', '==', user.uid)
+        );
+        const querySnapshot = await getDocs(q);
         const deletePromises = querySnapshot.docs.map((document) =>
           deleteDoc(doc(db, 'trafficLogs', document.id))
         );
@@ -124,11 +173,12 @@ export function useIncidentForm() {
     }
   };
 
-  // 5. ÖSSZES ADAT TÖRLÉSE (INCIDENSEK + FORGALOM)
+  // 5. SAJÁT ÖSSZES ADAT TÖRLÉSE
   const handleClearAll = async () => {
+    if (!user) return;
     if (
       window.confirm(
-        'Are you sure you want to delete ALL registered incidents and daily traffic logs?'
+        'Are you sure you want to delete ALL your registered incidents and daily traffic logs?'
       )
     ) {
       try {
@@ -136,15 +186,23 @@ export function useIncidentForm() {
         localStorage.removeItem('incidentRecords');
         localStorage.removeItem('dailyTrafficLogs');
 
-        // Incidensek törlése Firestore-ból
-        const incidentsSnapshot = await getDocs(collection(db, 'incidents'));
+        // Csak a saját incidensek törlése
+        const qIncidents = query(
+          collection(db, 'incidents'),
+          where('userId', '==', user.uid)
+        );
+        const incidentsSnapshot = await getDocs(qIncidents);
         const deleteIncidentsPromises = incidentsSnapshot.docs.map((document) =>
           deleteDoc(doc(db, 'incidents', document.id))
         );
         await Promise.all(deleteIncidentsPromises);
 
-        // Forgalom törlése Firestore-ból
-        const trafficSnapshot = await getDocs(collection(db, 'trafficLogs'));
+        // Csak a saját forgalmi adatok törlése
+        const qTraffic = query(
+          collection(db, 'trafficLogs'),
+          where('userId', '==', user.uid)
+        );
+        const trafficSnapshot = await getDocs(qTraffic);
         const deleteTrafficPromises = trafficSnapshot.docs.map((document) =>
           deleteDoc(doc(db, 'trafficLogs', document.id))
         );
