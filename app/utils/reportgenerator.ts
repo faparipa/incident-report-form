@@ -7,9 +7,9 @@ const REPORT_GENERATORS: Record<
 > = {
   Overstay: (r, dt, tm, nat, ag) => {
     const pronoun = r.gender === 'female' ? 'she' : 'he';
-    return `On the ${dt}, at ${tm}, a ${nat} (${ag}, ${r.gender || 'unknown'} ${
-      r.age || '??'
-    } y/o), overstayed for ${
+    return `On ${dt}, at ${tm},on the Exit line, a ${nat} (${ag}, ${
+      r.gender || 'unknown'
+    } ${r.age || '??'} y/o), overstayed for ${
       r.overstayDays || '0'
     } days, ${pronoun} was issued a ticket for ${
       r.penalty || '0'
@@ -30,21 +30,21 @@ const REPORT_GENERATORS: Record<
         ? r.gender.charAt(0).toUpperCase() + r.gender.slice(1)
         : 'Male';
 
-      return `On ${dt} at the ${dir.toLowerCase()} side at ${
+      return `On ${dt}, at ${
         r.time || '00:00'
-      }, an ${nat} (Minor age, ${capGender}, ${
+      }, on the Entry line, a/an ${nat} (Minor age, ${capGender}, ${
         r.age || '??'
-      } yo), travelling with ${childPossessive} ${pRelation} ${nat} (${
+      } yo),was refusal of ${dir.toUpperCase()}. The minor travelling with ${childPossessive} ${pRelation} ${nat} (${
         pGender.charAt(0).toUpperCase() + pGender.slice(1)
-      }, ${pAgeStr}), was refusal of ${dir.toUpperCase()}. The minor was NOT allowed to leave the country with ${childPossessive} ${pRelation}, due to the conditions for ${dir.toLowerCase()}ing the country applicable to the minor child was not fulfilled. (No authorization from ${pOppositeRelation} to leave the country)`;
+      }, ${pAgeStr}), due to reasons: ${r.reason || '-'} `;
     }
 
     const capGender = r.gender
       ? r.gender.charAt(0).toUpperCase() + r.gender.slice(1)
       : 'Male';
-    return `On the ${dt} At ${tm}, on the ${dir} line, a ${nat} (${capGender}, ${
+    return `On the ${dt} at ${tm}, on the ${dir} line, a/an ${nat} (${capGender}, ${
       r.age || '??'
-    } y/o) was refusal of entry, due to reasons: ${r.reason || '-'}`;
+    } y/o) was refusal of ${dir}, due to reasons: ${r.reason || '-'}`;
   },
 
   'Smuggling of goods': (r, dt, tm, nat, ag) => {
@@ -86,11 +86,11 @@ export const generateReport = (record: IncidentRecord): string => {
     const dir = record.entryExit || 'Entry';
     baseReport = `On the ${formattedDate}, at ${timeStr}, on the ${dir} line, a ${nat} (${ageGroup}, ${
       record.gender || 'unknown'
-    }, ${record.age || '??'} y/o.) was hit in ${
+    }, ${record.age || '??'} y/o.) had a hit on SIS art. ${
       record.reason || 'Database'
-    } concerning to a ${nat} ${
+    } (UE Regulation 2018/1862), in relation to the ${nat} ${
       record.docuType || 'ID'
-    }. The document was seized by the ${country} authorities.`;
+    } Card. The document was seized by the Border Police, to be sent to the authorities.`;
   } else {
     baseReport = `On the ${formattedDate}, at ${timeStr}, an incident type: ${
       record.incidentType || 'Other'

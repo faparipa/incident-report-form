@@ -74,3 +74,21 @@ export interface FormLabelProps {
   label: string;
   required?: boolean;
 }
+
+export interface ExcelRowModel {
+  tasksAssigned: string;
+  noOfIncid: number;
+  incidentsType: string;
+  personsMigrants: number;
+  nationalitiesRoleOfPerson: string;
+  joraNumber: string;
+  frontexInvolvement: 'YES' | 'NO';
+  refNo: number;
+  generatedReport: string;
+  date: string;
+  time: string;
+  direction: string;
+  age: string;
+  gender: string;
+  specificDetails: string;
+}
