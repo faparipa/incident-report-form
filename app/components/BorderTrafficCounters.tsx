@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { FormLabel } from './FormLabel';
 import { getTodayDateString } from '../utils/date';
 import { BorderTrafficCountersProps } from '../types/incident';
+import { db } from '../utils/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 export function BorderTrafficCounters({
   onRefresh,
@@ -13,7 +15,7 @@ export function BorderTrafficCounters({
     dailyExitTraffic: '',
   });
 
-  // Az éppen gépelt adatok betöltése (hogy ne vesszen el reloadkor)
+  // Az éppen gépelt adatok betöltése local-ból (mielőtt elküldenénk a felhőbe)
   useEffect(() => {
     const savedCurrent = localStorage.getItem('currentTrafficInput');
     if (savedCurrent) {
@@ -30,36 +32,50 @@ export function BorderTrafficCounters({
     localStorage.setItem('currentTrafficInput', JSON.stringify(updated));
   };
 
-  const handleSaveTraffic = () => {
+  const handleSaveTraffic = async () => {
+    // 1. Ellenőrzés: Üres mezők kiszűrése
     if (!trafficStats.dailyEntryTraffic && !trafficStats.dailyExitTraffic) {
       alert('Please fill in entry or exit traffic before saving!');
       return;
     }
 
-    // 1. Betöltjük a korábbi mentett napokat
-    const savedLogs = localStorage.getItem('dailyTrafficLogs');
-    const currentLogs = savedLogs ? JSON.parse(savedLogs) : [];
+    const today = getTodayDateString();
+    const entryVal = Number(trafficStats.dailyEntryTraffic) || 0;
+    const exitVal = Number(trafficStats.dailyExitTraffic) || 0;
 
-    // 2. Hozzáadjuk az újat a mai dátummal
-    const newLog = {
-      date: getTodayDateString(),
-      entry: trafficStats.dailyEntryTraffic || '0',
-      exit: trafficStats.dailyExitTraffic || '0',
-    };
+    try {
+      // 2. Mentés a Firebase Firestore felhőbe
+      await setDoc(doc(db, 'trafficLogs', today), {
+        date: today,
+        entry: entryVal,
+        exit: exitVal,
+        updatedAt: new Date().toISOString(),
+      });
 
-    // Mentés a listába
-    localStorage.setItem(
-      'dailyTrafficLogs',
-      JSON.stringify([...currentLogs, newLog])
-    );
+      // 3. Biztonsági mentés a localStorage-ba is (a gyors helyi rendereléshez és Excelhez)
+      const savedLogs = localStorage.getItem('dailyTrafficLogs');
+      const currentLogs = savedLogs ? JSON.parse(savedLogs) : [];
 
-    // 3. Inputok kiürítése
-    setTrafficStats({ dailyEntryTraffic: '', dailyExitTraffic: '' });
-    localStorage.removeItem('currentTrafficInput');
+      const filteredLogs = currentLogs.filter((log: any) => log.date !== today);
+      const updatedLogs = [
+        ...filteredLogs,
+        { date: today, entry: entryVal, exit: exitVal },
+      ];
 
-    // Szólunk a főoldalnak, hogy rajzolja újra a kis táblázatot
-    onRefresh();
-    //alert('Traffic counters saved successfully!');
+      localStorage.setItem('dailyTrafficLogs', JSON.stringify(updatedLogs));
+
+      // 4. Inputok kiürítése
+      setTrafficStats({ dailyEntryTraffic: '', dailyExitTraffic: '' });
+      localStorage.removeItem('currentTrafficInput');
+
+      // 5. FRISSÍTÉSI ÉRTESÍTÉS: Szólunk a szülő komponensnek, hogy a táblázat frissüljön alul!
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (error) {
+      console.error('Hiba a forgalom mentésekor:', error);
+      alert('Failed to save traffic stats to database.');
+    }
   };
 
   const inputClasses =

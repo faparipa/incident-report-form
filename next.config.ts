@@ -1,7 +1,10 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: 'export', // <-- Ez mondja meg a Next.js-nek, hogy statikus HTML/JS állományokat generáljon
+  images: {
+    unoptimized: true, // Statikus export esetén szükséges az képek kezeléséhez
+  },
 };
 
 export default nextConfig;
