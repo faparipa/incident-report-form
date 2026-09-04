@@ -51,7 +51,7 @@ export function BorderTrafficCounters({
     try {
       // 1. Mentés a Firestore-ba a BEJELENTKEZETT USER ID-JÁVAL
       await addDoc(collection(db, 'trafficLogs'), {
-        userId: user.uid, // <-- EZ HIÁNYZOTT!
+        userId: user.uid,
         date: today,
         entry: entryVal,
         exit: exitVal,
